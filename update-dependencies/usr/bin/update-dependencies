@@ -1,0 +1,74 @@
+#!/bin/bash
+set -e
+
+###################################################################
+#                 DO NOT CHANGE THIS CODE                       #
+###################################################################
+
+# the default dir to find for projects
+DEFAULT_WEB_PATH="/var/www"
+
+# defines the default prefix for frontend projects
+PREFIX="php-frontend-"
+
+# the name of the project
+PROJECT_NAME=$1
+
+# defines the project path
+PROJECT_PATH=$DEFAULT_WEB_PATH/$PREFIX$PROJECT_NAME
+
+# defines the libs path for project
+LIBS_PATH="$PROJECT_PATH/_libs"
+
+if [[ ! ($SITE_DOMAIN && ${SITE_DOMAIN-x}) ]]
+then
+    # LOADS PROJECT CONFIGURATION
+    source "$PROJECT_PATH/$PROJECT_NAME.cfg"
+fi
+
+# checks if there is no _libs path, then create it
+if [ ! -d "$LIBS_PATH" ]
+then
+    mkdir $LIBS_PATH
+fi
+
+printf ">> UPDATE PROJECT DEPENDENCIES...\n"
+
+cd $LIBS_PATH
+for KEY in "${!PROJECT_DEPENDENCIES[@]}"
+do
+    IFS=' ' read -a CURR_DEP <<< "${PROJECT_DEPENDENCIES["$KEY"]}"
+
+#     echo "${CURR_DEP[0]}" # remoteUrl
+#     echo "${CURR_DEP[1]}" # finalPath
+#     echo "${CURR_DEP[2]}" # branch
+#     echo "${CURR_DEP[3]}" # dependencie type 
+
+    # checks if store directory exists
+    if [ ! -d "$LIBS_PATH/${CURR_DEP[1]}" ]
+    then
+
+        printf "\n[ downloading dependence ] '${CURR_DEP[1]}'...\n"
+
+        git clone ${CURR_DEP[0]} ${CURR_DEP[1]}
+
+        cd "${CURR_DEP[1]}"
+            if [ "${CURR_DEP[2]}" != "master" ]
+            then
+                git checkout -q "${CURR_DEP[2]}"
+            fi
+        cd ..
+    else
+
+        printf "\n[ updating dependence ] '${CURR_DEP[1]}'...\n"
+
+        cd "${CURR_DEP[1]}"
+            git remote update -p
+            git checkout -q "${CURR_DEP[2]}"
+            git pull origin "${CURR_DEP[2]}"
+        cd ..
+    fi
+
+done
+
+printf "\n"
